@@ -18,7 +18,7 @@ From the root (make sure you've updated the submodule)
 
 > $ LLVM_COMPILER=clang make
 
-> $ extract-bc src/libsignal-protocol-c.a
+> $ extract-bc -b src/libsignal-protocol-c.a
 
 I have no idea if we can use that output with SAW
 
