@@ -2,11 +2,17 @@
 
 An effort to start verifying signal, demonstrating the SAW Python frontend in the process.
 
-# Building
+# Building `libsignal`
 
-First build the signal bitcode with wllvm
+First build the signal bitcode with `wllvm`
 
-From the root (make sure you've updated the submodule)
+From the root (make sure you've updated the submodule):
+
+```
+$ make
+```
+
+If that doesn't work, you can try running each of the commands in the `Makefile` individually:
 
 ```
 $ cd libsignal-protocol-c/
