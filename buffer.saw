@@ -14,7 +14,7 @@ let buffer_create_spec (len : Int) = do {
   let lenval = {{`(len) : [64]}};
   (data, datap) <- ptr_to_fresh "data" (llvm_array len i8);
 
-  llvm_execute_func [llvm_term lenval, datap];
+  llvm_execute_func [datap, llvm_term lenval];
   
   buf   <- llvm_alloc (llvm_array (eval_int {{(8 + `(len) : [64])}}) (llvm_int 8));
   llvm_points_to_untyped buf (llvm_struct_value [llvm_term lenval, llvm_term data]);
