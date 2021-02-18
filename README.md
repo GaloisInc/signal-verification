@@ -37,6 +37,26 @@ I have no idea if we can use that output with SAW
 $ . virtenv/bin/activate
 ```
 
+install dependencies 
+
+```
+/signal-verification$ pip install -r galois-py-toolkit/requirements.txt
+```
+
+BitVector failure in red, ignore
+
+```
+pip install -e galois-py-toolkit/
+```
+
+# Python environment
+
+```
+*/signal-verification$ python3 -m venv virtenv
+```
+
+
+
 then
 
 ```
