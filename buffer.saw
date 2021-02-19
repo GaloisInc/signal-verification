@@ -21,7 +21,29 @@ let buffer_create_spec (len : Int) = do {
   llvm_return buf;
 };
 
+let buffer_copy_spec (len : Int) = do {
+
+  let lenval = {{`(len) : [64]}};
+  data  <- crucible_fresh_var "data" (llvm_array len i8);
+  buffer   <- llvm_alloc (llvm_array (eval_int {{(8 + `(len) : [64])}}) (llvm_int 8));
+  llvm_points_to_untyped buffer (llvm_struct_value [llvm_term lenval, llvm_term data]);
+
+  llvm_execute_func[buffer];
+
+  newbuf <- llvm_alloc (llvm_array (eval_int {{(8 + `(len) : [64])}}) (llvm_int 8));
+  llvm_points_to_untyped newbuf (llvm_struct_value [llvm_term lenval, llvm_term data]);
+  //llvm_points_to_untyped buffer (llvm_struct_value [llvm_term lenval, llvm_term data]);
+  llvm_return newbuf;
+};
+
 m <- llvm_load_module "libsignal-protocol-c/build/src/libsignal-protocol-c.a.bc";
+
+let print_tactic = do {
+  //simplify (cryptol_ss ());
+  print_goal;
+  abc;
+};
 
 buffer_alloc_ov <- llvm_verify m "signal_buffer_alloc" [] false (buffer_alloc_spec 64) abc;
 buffer_create_ov <-llvm_verify m "signal_buffer_create" [] false (buffer_create_spec 64) abc;
+buffer_copy_ov <-llvm_verify m "signal_buffer_copy" [buffer_create_ov] false (buffer_copy_spec 64) print_tactic;
