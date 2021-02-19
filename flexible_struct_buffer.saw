@@ -1,0 +1,17 @@
+include "helpers.saw";
+
+m <- llvm_load_module "flexible_struct_buffer.bc";
+
+let get_length_spec (len : Int) = do {
+
+  let lenval = {{`(len) : [64]}};
+  data  <- crucible_fresh_var "data" (llvm_array len i8);
+  buffer   <- llvm_alloc (llvm_array (eval_int {{(8 + `(len) : [64])}}) (llvm_int 8));
+  llvm_points_to_untyped buffer (llvm_struct_value [llvm_term lenval, llvm_term data]);
+
+  llvm_execute_func[buffer];
+
+  llvm_return (llvm_term lenval);
+};
+
+llvm_verify m "get_length" [] false (get_length_spec 64) abc;
