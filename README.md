@@ -27,6 +27,9 @@ I have no idea if we can use that output with SAW
 
 # Python environment
 
+You'll need at least python 3.8 installed, be sure that the command below
+uses python 3.8, not something lower.
+
 ```
 */signal-verification$ python3 -m venv virtenv
 ```
