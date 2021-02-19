@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "signal-verification"
+version = "0.1.0"
+description = ""
+authors = ["Ryan Scott <rscott@galois.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+requests = "^2.25.1"
+BitVector = "^3.4.9"
+galois-toolkit = { path = "./galois-py-toolkit/", develop = true }
+
+[tool.poetry.dev-dependencies]
+mypy = "^0.790"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

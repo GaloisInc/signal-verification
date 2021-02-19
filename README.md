@@ -27,6 +27,23 @@ I have no idea if we can use that output with SAW
 
 # Python environment
 
+## [Poetry](https://python-poetry.org/)
+
+First, [install `poetry`](https://python-poetry.org/docs/#installation) and then run:
+
+```
+$ poetry install
+```
+
+You should now be able to typecheck and run the files in this repo, e.g.,
+
+```
+$ poetry run mypy buffer.py
+$ poetry run python buffer.py
+```
+
+## `virtualenv`
+
 You'll need at least python 3.8 installed, be sure that the command below
 uses python 3.8, not something lower.
 
@@ -40,7 +57,7 @@ uses python 3.8, not something lower.
 $ . virtenv/bin/activate
 ```
 
-install dependencies 
+install dependencies
 
 ```
 /signal-verification$ pip install -r galois-py-toolkit/requirements.txt
