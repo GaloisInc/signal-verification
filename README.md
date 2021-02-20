@@ -23,8 +23,6 @@ $ LLVM_COMPILER=clang make
 $ extract-bc -b src/libsignal-protocol-c.a
 ```
 
-I have no idea if we can use that output with SAW
-
 # Python environment
 
 ## [Poetry](https://python-poetry.org/)
