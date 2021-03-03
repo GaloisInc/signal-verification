@@ -2,6 +2,17 @@
 
 An effort to start verifying signal, demonstrating the SAW Python frontend in the process.
 
+# Building `saw` and `saw-remote-api`.
+
+You will need a development version of `saw` and `saw-remote-api`. To do so:
+
+```
+$ git clone https://github.com/GaloisInc/saw-script
+$ ./build.sh
+```
+
+This will produce binaries under the `bin/` directory.
+
 # Building `libsignal`
 
 First build the signal bitcode with `wllvm`
