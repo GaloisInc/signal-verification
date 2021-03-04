@@ -65,6 +65,21 @@ let buffer_copy_n_spec (len : Int) (n: Int) = do {
   llvm_return newbuf;
   };
 
+let buffer_append_spec (buffer_len : Int) (additional_len : Int) = do {
+  buffer_data <- llvm_fresh_var "buffer_data" (llvm_array buffer_len i8);
+  buffer <- alloc_pointsto_buffer buffer_len buffer_data;
+
+  let additional_len_val = {{`(additional_len) : [64]}};
+  (additional_data, additional_datap) <- ptr_to_fresh "additional_data" (llvm_array additional_len i8);
+
+  llvm_execute_func [buffer, additional_datap, llvm_term additional_len_val];
+
+  let new_len_val = {{ `(buffer_len) + `(additional_len) : [64] }};
+  let new_len = eval_int new_len_val;
+  new_buffer <- alloc_pointsto_buffer new_len {{ buffer_data # additional_data }};
+  llvm_return new_buffer;
+};
+
 m <- llvm_load_module "libsignal-protocol-c/build/src/libsignal-protocol-c.a.bc";
 
 let print_tactic = do {
@@ -77,3 +92,4 @@ buffer_alloc_ov <- llvm_verify m "signal_buffer_alloc" [] false (buffer_alloc_sp
 buffer_create_ov <-llvm_verify m "signal_buffer_create" [] false (buffer_create_spec 64) abc;
 buffer_copy_ov <-llvm_verify m "signal_buffer_copy" [] false (buffer_copy_spec 63) abc;
 buffer_copy_n_ov <- llvm_verify m "signal_buffer_n_copy" [] false (buffer_copy_n_spec 64 31) abc;
+buffer_append_ov <- llvm_verify m "signal_buffer_append" [] false (buffer_append_spec 63 31) abc;
