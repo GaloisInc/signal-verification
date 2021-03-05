@@ -110,7 +110,31 @@ class BufferCopyNSpec(Contract):
         new_buf = alloc_pointsto_buffer(self, new_length, cryptol("take`{i} data".format(i=new_length)))
         self.returns(new_buf)
 
+class BufferAppendSpec(Contract):
+    buf_length: int
+    additional_length: int
+
+    def __init__(self, buf_length: int, additional_length: int):
+        super().__init__()
+        self.buf_length = buf_length
+        self.additional_length = additional_length
+
+    def specification(self) -> None:
+        buf_data = self.fresh_var(array(self.buf_length, i8), "buffer_data")
+        buf      = alloc_pointsto_buffer(self, self.buf_length, buf_data)
+
+        (additional_data, additional_datap) = ptr_to_fresh(self, array(self.additional_length, i8),
+                                                           name = "additional_data")
+
+        self.execute_func(buf, additional_datap, int_to_64_cryptol(self.additional_length))
+
+        new_length = self.buf_length + self.additional_length;
+        new_buf    = alloc_pointsto_buffer(self, new_length,
+                                           cryptol(f"{buf_data.name()} # {additional_data.name()}"))
+        self.returns(new_buf)
+
 buffer_alloc_ov  = llvm_verify(mod, "signal_buffer_alloc",  BufferAllocSpec(64))
 buffer_create_ov = llvm_verify(mod, "signal_buffer_create", BufferCreateSpec(64))
 buffer_copy_ov   = llvm_verify(mod, "signal_buffer_copy",   BufferCopySpec(63))
 buffer_copy_n_ov = llvm_verify(mod, "signal_buffer_n_copy", BufferCopyNSpec(64, 31))
+buffer_append_ov = llvm_verify(mod, "signal_buffer_append", BufferAppendSpec(63, 31))
