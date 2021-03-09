@@ -80,6 +80,17 @@ let buffer_append_spec (buffer_len : Int) (additional_len : Int) = do {
   llvm_return new_buffer;
 };
 
+let constant_memcmp_spec (n: Int) = do {
+  (s1, s1p) <- ptr_to_fresh "s1" (llvm_array n i8);
+  (s2, s2p) <- ptr_to_fresh "s2" (llvm_array n i8);
+  let nval = {{ `n : [64] }};
+
+  llvm_execute_func [s1p, s2p, llvm_term nval];
+
+  let retval = {{ zext`{32} (foldl (||) zero (zipWith (^) s1 s2)) }};
+  llvm_return (llvm_term retval);
+};
+
 m <- llvm_load_module "libsignal-protocol-c/build/src/libsignal-protocol-c.a.bc";
 
 let print_tactic = do {
@@ -88,8 +99,9 @@ let print_tactic = do {
   abc;
 };
 
-buffer_alloc_ov <- llvm_verify m "signal_buffer_alloc" [] false (buffer_alloc_spec 64) abc;
-buffer_create_ov <-llvm_verify m "signal_buffer_create" [] false (buffer_create_spec 64) abc;
-buffer_copy_ov <-llvm_verify m "signal_buffer_copy" [] false (buffer_copy_spec 63) abc;
-buffer_copy_n_ov <- llvm_verify m "signal_buffer_n_copy" [] false (buffer_copy_n_spec 64 31) abc;
-buffer_append_ov <- llvm_verify m "signal_buffer_append" [] false (buffer_append_spec 63 31) abc;
+buffer_alloc_ov    <- llvm_verify m "signal_buffer_alloc"    [] false (buffer_alloc_spec 64) abc;
+buffer_create_ov   <- llvm_verify m "signal_buffer_create"   [] false (buffer_create_spec 64) abc;
+buffer_copy_ov     <- llvm_verify m "signal_buffer_copy"     [] false (buffer_copy_spec 63) abc;
+buffer_copy_n_ov   <- llvm_verify m "signal_buffer_n_copy"   [] false (buffer_copy_n_spec 64 31) abc;
+buffer_append_ov   <- llvm_verify m "signal_buffer_append"   [] false (buffer_append_spec 63 31) abc;
+constant_memcmp_ov <- llvm_verify m "signal_constant_memcmp" [] false (constant_memcmp_spec 63) abc;

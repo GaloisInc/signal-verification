@@ -133,8 +133,25 @@ class BufferAppendSpec(Contract):
                                            cryptol(f"{buf_data.name()} # {additional_data.name()}"))
         self.returns(new_buf)
 
-buffer_alloc_ov  = llvm_verify(mod, "signal_buffer_alloc",  BufferAllocSpec(64))
-buffer_create_ov = llvm_verify(mod, "signal_buffer_create", BufferCreateSpec(64))
-buffer_copy_ov   = llvm_verify(mod, "signal_buffer_copy",   BufferCopySpec(63))
-buffer_copy_n_ov = llvm_verify(mod, "signal_buffer_n_copy", BufferCopyNSpec(64, 31))
-buffer_append_ov = llvm_verify(mod, "signal_buffer_append", BufferAppendSpec(63, 31))
+class ConstantMemcmpSpec(Contract):
+    n: int
+
+    def __init__(self, n: int):
+        super().__init__()
+        self.n = n
+
+    def specification(self) -> None:
+        (s1, s1p) = ptr_to_fresh(self, array(self.n, i8), name = "s1")
+        (s2, s2p) = ptr_to_fresh(self, array(self.n, i8), name = "s2")
+        nval = int_to_64_cryptol(self.n)
+
+        self.execute_func(s1p, s2p, nval)
+
+        self.returns(cryptol(f"zext`{{32}} (foldl (||) zero (zipWith (^) {s1.name()} {s2.name()}))"))
+
+buffer_alloc_ov    = llvm_verify(mod, "signal_buffer_alloc",  BufferAllocSpec(64))
+buffer_create_ov   = llvm_verify(mod, "signal_buffer_create", BufferCreateSpec(64))
+buffer_copy_ov     = llvm_verify(mod, "signal_buffer_copy",   BufferCopySpec(63))
+buffer_copy_n_ov   = llvm_verify(mod, "signal_buffer_n_copy", BufferCopyNSpec(64, 31))
+buffer_append_ov   = llvm_verify(mod, "signal_buffer_append", BufferAppendSpec(63, 31))
+constant_memcmp_ov = llvm_verify(mod, "signal_constant_memcmp", ConstantMemcmpSpec(63))
