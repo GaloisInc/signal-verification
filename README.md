@@ -2,25 +2,52 @@
 
 An effort to start verifying signal, demonstrating the SAW Python frontend in the process.
 
-# Building `saw` and `saw-remote-api`.
+# Building dependencies
 
-You will need a development version of `saw` and `saw-remote-api`. To do so:
+First, install the following prerequisites:
+
+* [Clang](https://clang.llvm.org/)
+* [CMake](https://cmake.org/)
+* [GHC](https://www.haskell.org/ghc/) (8.6 or later) and [`cabal`](https://www.haskell.org/cabal/)
+* [Python](https://www.python.org/) (3.8 or later) and [Poetry](https://python-poetry.org/)
+* [WLLVM](https://github.com/travitch/whole-program-llvm)
+
+The following is optional, but highly recommended:
+
+* [`direnv`](https://direnv.net/)
+
+Next, you will need to clone the submodules:
 
 ```
-$ git clone https://github.com/GaloisInc/saw-script
-$ ./build.sh
+$ git submodule update --init
 ```
 
-This will produce binaries under the `bin/` directory.
+Then, you can build all of the dependencies with:
 
-# Building `libsignal`
+```
+$ make
+```
 
-First build the signal bitcode with `wllvm`
+Alternatively, if you want to be more explicit, you can run:
+
+```
+$ make libsignal
+$ make saw-haskell
+$ make saw-python-poetry
+```
+
+This will build all of the C, Haskell, and Python dependencies, respectively.
+Refer to the following sections for more details on what this entails.
+
+## Building `libsignal`
+
+First, you will need to build the `libsignal-protocol-c` library using
+[`wllvm`](https://github.com/travitch/whole-program-llvm).
 
 From the root (make sure you've updated the submodule):
 
 ```
-$ make
+$ make libsignal
 ```
 
 If that doesn't work, you can try running each of the commands in the `Makefile` individually:
@@ -34,75 +61,125 @@ $ LLVM_COMPILER=clang make
 $ extract-bc -b src/libsignal-protocol-c.a
 ```
 
-# Python environment
+## Building `saw` and `saw-remote-api`.
 
-## [Poetry](https://python-poetry.org/)
+You will need a development version of `saw` and `saw-remote-api`. To do so:
 
-First, [install `poetry`](https://python-poetry.org/docs/#installation) and then run:
+```
+$ make saw-haskell
+```
+
+Alternatively, if you want to be more explicit:
+
+```
+$ (cd saw-script && ./build)
+```
+
+This will produce binaries under the `saw-script/bin/` directory, which will
+used when invoking the Python code.
+
+## Building a Python environment
+
+There are two ways of building a Python environment:
+
+* [Poetry](https://python-poetry.org/) (recommended)
+* `virtualenv`
+
+### Poetry
+
+Run the following command:
+
+```
+$ make saw-python
+```
+
+Alternatively:
 
 ```
 $ poetry install
 ```
 
-You should now be able to typecheck and run the files in this repo, e.g.,
+You should now be able to typecheck and the files in this repo as a sanity
+check:
 
 ```
 $ poetry run mypy buffer.py
-$ poetry run python buffer.py
 ```
 
-## `virtualenv`
+### `virtualenv`
 
-You'll need at least python 3.8 installed, be sure that the command below
-uses python 3.8, not something lower.
+As an alternative to Poetry, you can install the Python dependencies in a
+`virtualenv`. To build an appropriate `virtualenv`, run the following script:
 
 ```
-*/signal-verification$ python3 -m venv virtenv
+$ ./build-virtenv.sh
+```
+
+And then activate it with:
+
+```
+$ source virtenv/bin/activate
+```
+
+Alternatively, run the following steps. First, create the `virtualenv`:
+
+```
+$ python3 -m venv virtenv
 ```
 
 (vscode asks me to add the venv for the environment here. I said yes, either reload the terminal in vscode or)
 
-```
-$ . virtenv/bin/activate
-```
-
-install dependencies
+Next, activate it with:
 
 ```
-/signal-verification$ pip install -r galois-py-toolkit/requirements.txt
+$ source virtenv/bin/activate
 ```
 
-BitVector failure in red, ignore
+Now install the Cryptol and SAW bindings' dependencies:
 
 ```
-pip install -e galois-py-toolkit/
+$ pip install -r saw-script/deps/cryptol/cryptol-remote-api/python/requirements.txt
+$ pip install -r saw-script/saw/saw-remote-api/python/requirements.txt
 ```
 
-# Python environment
+(Note that installing `BitVector` will appear to fail with a red error message,
+but in actuality, the overall installation will succeed. You can safely ignore
+the scary-looking red error message bit.)
+
+Now install the libraries themselves:
 
 ```
-*/signal-verification$ python3 -m venv virtenv
+$ pip install -e saw-script/deps/cryptol/cryptol-remote-api/python/
+$ pip install -e saw-script/saw/saw-remote-api/python/
 ```
 
-
-
-then
+To leave the `virtualenv`, run:
 
 ```
-$ pip install -r requirements.txt
+$ deactivate
 ```
 
-this gives me an error about BitVector but I think it's ok
+# Running
 
-this part needs a better answer...
-
-```
-$ pip install -e ../saw-script/deps/argo/python/
-$ export SAW_SERVER="saw-remote-api socket"
-```
-
-^ I don't know if that's permanent in the virtual environment. Probably not
+First, you will need to run the following to ensure that the appropriate
+environment variables are set:
 
 ```
-$ python buffer.py
+$ source .envrc
+```
+
+Note that if you have [`direnv`](https://direnv.net/) installed, this step will
+automatically happen behind the scenes.
+
+In order to invoke the Python specifications, run the following:
+
+```
+$ poetry run python buffer.py
+```
+
+This repo also comes with a SAWScript equivalent of `buffer.py`, which can be
+run with:
+
+```
+$ $SAW_EXE buffer.saw
 ```

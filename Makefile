@@ -1,6 +1,8 @@
 LIBSIGNAL_BUILD_DIR=libsignal-protocol-c/build
 
-all: $(LIBSIGNAL_BUILD_DIR)/src/libsignal-protocol-c.a.bc
+all: libsignal saw-haskell saw-python-poetry
+
+libsignal: $(LIBSIGNAL_BUILD_DIR)/src/libsignal-protocol-c.a.bc
 
 $(LIBSIGNAL_BUILD_DIR)/src/libsignal-protocol-c.a:
 	mkdir -p $(LIBSIGNAL_BUILD_DIR)
@@ -11,6 +13,18 @@ $(LIBSIGNAL_BUILD_DIR)/src/libsignal-protocol-c.a:
 $(LIBSIGNAL_BUILD_DIR)/src/libsignal-protocol-c.a.bc: $(LIBSIGNAL_BUILD_DIR)/src/libsignal-protocol-c.a
 	(cd $(LIBSIGNAL_BUILD_DIR) && \
 	extract-bc -b src/libsignal-protocol-c.a)
+
+.PHONY: saw-haskell
+saw-haskell:
+	(cd saw-script && ./build.sh)
+
+.PHONY: saw-python-poetry
+saw-python-poetry:
+	poetry install
+
+.PHONY: saw-python-virtualenv
+saw-python-virtualenv:
+	./build-virtenv.sh
 
 .PHONY: clean
 clean:

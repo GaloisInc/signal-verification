@@ -3,7 +3,7 @@ import os.path
 
 from saw import *
 from saw.llvm import Contract, FreshVar, SetupVal, cryptol, elem, struct, void
-from saw.llvm_types import LLVMType, array, i8, i32, i64
+from saw.llvm_types import LLVMType, alias, array, i8, i32, i64, ptr, struct_type
 
 from env_server import *
 from helpers import *
@@ -149,9 +149,31 @@ class ConstantMemcmpSpec(Contract):
 
         self.returns(cryptol(f"zext`{{32}} (foldl (||) zero (zipWith (^) {s1.name()} {s2.name()}))"))
 
-buffer_alloc_ov    = llvm_verify(mod, "signal_buffer_alloc",  BufferAllocSpec(64))
-buffer_create_ov   = llvm_verify(mod, "signal_buffer_create", BufferCreateSpec(64))
-buffer_copy_ov     = llvm_verify(mod, "signal_buffer_copy",   BufferCopySpec(63))
-buffer_copy_n_ov   = llvm_verify(mod, "signal_buffer_n_copy", BufferCopyNSpec(64, 31))
-buffer_append_ov   = llvm_verify(mod, "signal_buffer_append", BufferAppendSpec(63, 31))
-constant_memcmp_ov = llvm_verify(mod, "signal_constant_memcmp", ConstantMemcmpSpec(63))
+DJB_TYPE = 0x05
+DJB_KEY_LEN = 32
+
+class ECPublicKeySerializeSpec(Contract):
+    def specification(self) -> None:
+        length = DJB_KEY_LEN + 1
+        signal_type_base_ty = alias("struct.signal_type_base")
+        djb_array_ty = array(DJB_KEY_LEN, i8)
+        buffer_ = self.alloc(ptr(buffer_type(length)))
+        key_base = self.fresh_var(signal_type_base_ty, "key_base")
+        key_data = self.fresh_var(djb_array_ty, "key_data")
+        key = self.alloc(struct_type(signal_type_base_ty, djb_array_ty),
+                         points_to = struct(key_base, key_data))
+
+        self.execute_func(buffer_, key)
+
+        buf = alloc_pointsto_buffer(self, length,
+                                    cryptol(f"[`({DJB_TYPE})] # {key_data.name()} : [{length}][8]"))
+        self.points_to(buffer_, buf)
+        self.returns(int_to_32_cryptol(0))
+
+buffer_alloc_ov            = llvm_verify(mod, "signal_buffer_alloc",     BufferAllocSpec(64))
+buffer_create_ov           = llvm_verify(mod, "signal_buffer_create",    BufferCreateSpec(64))
+buffer_copy_ov             = llvm_verify(mod, "signal_buffer_copy",      BufferCopySpec(63))
+buffer_copy_n_ov           = llvm_verify(mod, "signal_buffer_n_copy",    BufferCopyNSpec(64, 31))
+buffer_append_ov           = llvm_verify(mod, "signal_buffer_append",    BufferAppendSpec(63, 31))
+constant_memcmp_ov         = llvm_verify(mod, "signal_constant_memcmp",  ConstantMemcmpSpec(63))
+ec_public_key_serialize_ov = llvm_verify(mod, "ec_public_key_serialize", ECPublicKeySerializeSpec())

@@ -1,7 +1,9 @@
 include "helpers.saw";
 
-let buffer_type_string (len : Int) : LLVMType =
-  llvm_struct_type [i64, llvm_array len i8];
+let buffer_type_ptr (len : Int) : LLVMType =
+  // We don't directly have a way to express `ty*` in SAWScript, so we hack it
+  // using llvm_type. Ack!
+  llvm_type (str_concat "{i64, [" (str_concat (show len) "x i8]}*"));
 
 let buffer_type (len : Int) : LLVMType = (llvm_array (eval_size {| 8 + len|}) i8);
 let alloc_buffer_aligned (len : Int) = llvm_alloc_aligned 16 (buffer_type len);
@@ -83,12 +85,33 @@ let buffer_append_spec (buffer_len : Int) (additional_len : Int) = do {
 let constant_memcmp_spec (n: Int) = do {
   (s1, s1p) <- ptr_to_fresh "s1" (llvm_array n i8);
   (s2, s2p) <- ptr_to_fresh "s2" (llvm_array n i8);
-  let nval = {{ `n : [64] }};
+  let nval = {{ `(n) : [64] }};
 
   llvm_execute_func [s1p, s2p, llvm_term nval];
 
   let retval = {{ zext`{32} (foldl (||) zero (zipWith (^) s1 s2)) }};
   llvm_return (llvm_term retval);
+};
+
+let djb_type = 0x05;
+let djb_key_len = 32;
+
+let ec_public_key_serialize_spec = do {
+  let lenval = {{ `(djb_key_len) + 1 : [64] }};
+  let len = eval_int lenval;
+  let signal_type_base_ty = llvm_alias "struct.signal_type_base";
+  let djb_array_ty = llvm_array djb_key_len i8;
+  buffer <- llvm_alloc (buffer_type_ptr len);
+  key_base <- llvm_fresh_var "key_base" signal_type_base_ty;
+  key_data <- llvm_fresh_var "key_data" djb_array_ty;
+  key <- alloc_init (llvm_struct_type [signal_type_base_ty, djb_array_ty])
+                    (llvm_struct_value [llvm_term key_base, llvm_term key_data]);
+
+  llvm_execute_func [buffer, key];
+
+  buf <- alloc_pointsto_buffer len {{ [`(djb_type)] # key_data : [len][8] }};
+  llvm_points_to buffer buf;
+  llvm_return (llvm_term {{ zero : [32] }});
 };
 
 m <- llvm_load_module "libsignal-protocol-c/build/src/libsignal-protocol-c.a.bc";
@@ -99,9 +122,10 @@ let print_tactic = do {
   abc;
 };
 
-buffer_alloc_ov    <- llvm_verify m "signal_buffer_alloc"    [] false (buffer_alloc_spec 64) abc;
-buffer_create_ov   <- llvm_verify m "signal_buffer_create"   [] false (buffer_create_spec 64) abc;
-buffer_copy_ov     <- llvm_verify m "signal_buffer_copy"     [] false (buffer_copy_spec 63) abc;
-buffer_copy_n_ov   <- llvm_verify m "signal_buffer_n_copy"   [] false (buffer_copy_n_spec 64 31) abc;
-buffer_append_ov   <- llvm_verify m "signal_buffer_append"   [] false (buffer_append_spec 63 31) abc;
-constant_memcmp_ov <- llvm_verify m "signal_constant_memcmp" [] false (constant_memcmp_spec 63) abc;
+buffer_alloc_ov            <- llvm_verify m "signal_buffer_alloc"     [] false (buffer_alloc_spec 64) abc;
+buffer_create_ov           <- llvm_verify m "signal_buffer_create"    [] false (buffer_create_spec 64) abc;
+buffer_copy_ov             <- llvm_verify m "signal_buffer_copy"      [] false (buffer_copy_spec 63) abc;
+buffer_copy_n_ov           <- llvm_verify m "signal_buffer_n_copy"    [] false (buffer_copy_n_spec 64 31) abc;
+buffer_append_ov           <- llvm_verify m "signal_buffer_append"    [] false (buffer_append_spec 63 31) abc;
+constant_memcmp_ov         <- llvm_verify m "signal_constant_memcmp"  [] false (constant_memcmp_spec 63) abc;
+ec_public_key_serialize_ov <- llvm_verify m "ec_public_key_serialize" [] false ec_public_key_serialize_spec abc;

@@ -8,10 +8,10 @@ authors = ["Ryan Scott <rscott@galois.com>"]
 python = "^3.8"
 requests = "^2.25.1"
 BitVector = "^3.4.9"
-galois-toolkit = { path = "./galois-py-toolkit/", develop = true }
+saw = { path = "./saw-script/saw-remote-api/python/", develop = true }
 
 [tool.poetry.dev-dependencies]
-mypy = "^0.790"
+mypy = "^0.812"
 isort = "^5.7.0"
 
 [build-system]

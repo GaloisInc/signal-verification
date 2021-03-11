@@ -1,6 +1,6 @@
 [submodule "libsignal-protocol-c"]
 	path = libsignal-protocol-c
 	url = https://github.com/signalapp/libsignal-protocol-c.git
-[submodule "galois-py-toolkit"]
-	path = galois-py-toolkit
-	url = https://github.com/GaloisInc/galois-py-toolkit.git
+[submodule "saw-script"]
+	path = saw-script
+	url = https://github.com/GaloisInc/saw-script.git
