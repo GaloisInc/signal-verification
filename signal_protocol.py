@@ -1,47 +1,14 @@
 import os
 import os.path
 
-from saw import *
-from saw.llvm import Contract, FreshVar, SetupVal, cryptol, elem, struct, void
-from saw.llvm_types import LLVMType, alias, array, i8, i32, i64, ptr, struct_type
+from saw import llvm_verify
+from saw.llvm import Contract, cryptol, elem, struct
+from saw.llvm_types import alias, array, i8, i64, ptr, struct_type
 
-from env_server import *
-from helpers import *
+from buffer_helpers import *
+from load import mod
+from saw_helpers import *
 
-dir_path = os.path.dirname(os.path.realpath(__file__))
-
-env_connect_global()
-view(LogResults())
-
-path = [dir_path, "libsignal-protocol-c", "build", "src", "libsignal-protocol-c.a.bc"]
-bcname = os.path.join(*path)
-print(bcname)
-mod = llvm_load_module(bcname)
-
-def int_to_32_cryptol(length: int):
-    return cryptol("`{i}:[32]".format(i=length))
-
-def int_to_64_cryptol(length: int):
-    return cryptol("`{i}:[64]".format(i=length))
-
-def buffer_type(length: int) -> LLVMType:
-    return array(8 + length, i8)
-
-def alloc_buffer_aligned(spec: Contract, length: int) -> SetupVal:
-    return spec.alloc(buffer_type(length), alignment = 16)
-
-def alloc_buffer_aligned_readonly(spec: Contract, length: int) -> SetupVal:
-    return spec.alloc(buffer_type(length), alignment = 16, read_only = True)
-
-def alloc_pointsto_buffer(spec: Contract, length: int, data: SetupVal) -> SetupVal:
-    buf = alloc_buffer_aligned(spec, length)
-    spec.points_to(buf, struct(int_to_64_cryptol(length)), check_target_type = None)
-    return buf
-
-def alloc_pointsto_buffer_readonly(spec: Contract, length: int, data: SetupVal) -> SetupVal:
-    buf = alloc_buffer_aligned_readonly(spec, length)
-    spec.points_to(buf, struct(int_to_64_cryptol(length)), check_target_type = None)
-    return buf
 
 class BufferAllocSpec(Contract):
     length: int
@@ -170,10 +137,9 @@ class ECPublicKeySerializeSpec(Contract):
         self.points_to(buffer_, buf)
         self.returns(int_to_32_cryptol(0))
 
-buffer_alloc_ov            = llvm_verify(mod, "signal_buffer_alloc",     BufferAllocSpec(64))
-buffer_create_ov           = llvm_verify(mod, "signal_buffer_create",    BufferCreateSpec(64))
-buffer_copy_ov             = llvm_verify(mod, "signal_buffer_copy",      BufferCopySpec(63))
-buffer_copy_n_ov           = llvm_verify(mod, "signal_buffer_n_copy",    BufferCopyNSpec(64, 31))
-buffer_append_ov           = llvm_verify(mod, "signal_buffer_append",    BufferAppendSpec(63, 31))
-constant_memcmp_ov         = llvm_verify(mod, "signal_constant_memcmp",  ConstantMemcmpSpec(63))
-ec_public_key_serialize_ov = llvm_verify(mod, "ec_public_key_serialize", ECPublicKeySerializeSpec())
+buffer_alloc_ov    = llvm_verify(mod, "signal_buffer_alloc",    BufferAllocSpec(64))
+buffer_create_ov   = llvm_verify(mod, "signal_buffer_create",   BufferCreateSpec(64))
+buffer_copy_ov     = llvm_verify(mod, "signal_buffer_copy",     BufferCopySpec(63))
+buffer_copy_n_ov   = llvm_verify(mod, "signal_buffer_n_copy",   BufferCopyNSpec(64, 31))
+buffer_append_ov   = llvm_verify(mod, "signal_buffer_append",   BufferAppendSpec(63, 31))
+constant_memcmp_ov = llvm_verify(mod, "signal_constant_memcmp", ConstantMemcmpSpec(63))

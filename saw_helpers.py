@@ -1,6 +1,5 @@
-from typing import Tuple
+from typing import Optional, Tuple
 
-from saw import *
 from saw.llvm import Contract, FreshVar, SetupVal
 from saw.llvm_types import LLVMType
 
