@@ -1,6 +1,8 @@
 import os
+
 import saw as saw
 import saw.connection as conn
+
 
 def env_connect():
     server = os.environ.get('SAW_SERVER')
