@@ -1,11 +1,7 @@
 include "helpers.saw";
 
-let buffer_type_ptr (len : Int) : LLVMType =
-  // We don't directly have a way to express `ty*` in SAWScript, so we hack it
-  // using llvm_type. Ack!
-  llvm_type (str_concat "{i64, [" (str_concat (show len) "x i8]}*"));
-
 let buffer_type (len : Int) : LLVMType = (llvm_array (eval_size {| 8 + len|}) i8);
+let buffer_type_ptr (len : Int) : LLVMType = llvm_pointer (buffer_type len);
 let alloc_buffer_aligned (len : Int) = llvm_alloc_aligned 16 (buffer_type len);
 let alloc_buffer_aligned_readonly (len: Int ) = llvm_alloc_readonly_aligned 16 (buffer_type len);
 let alloc_pointsto_buffer (len : Int) (data : Term) = do {
