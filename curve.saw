@@ -2,14 +2,14 @@ include "buffer_helpers.saw";
 include "load.saw";
 include "saw_helpers.saw";
 
-let djb_type = 0x05;
-let djb_key_len = 32;
+let DJB_TYPE    = 0x05;
+let DJB_KEY_LEN = 32;
 
 let ec_public_key_serialize_spec = do {
-  let lenval = {{ `(djb_key_len) + 1 : [64] }};
+  let lenval = {{ `(DJB_KEY_LEN) + 1 : [64] }};
   let len = eval_int lenval;
   let signal_type_base_ty = llvm_alias "struct.signal_type_base";
-  let djb_array_ty = llvm_array djb_key_len i8;
+  let djb_array_ty = llvm_array DJB_KEY_LEN i8;
   buffer <- llvm_alloc (buffer_type_ptr len);
   key_base <- llvm_fresh_var "key_base" signal_type_base_ty;
   key_data <- llvm_fresh_var "key_data" djb_array_ty;
@@ -18,7 +18,7 @@ let ec_public_key_serialize_spec = do {
 
   llvm_execute_func [buffer, key];
 
-  buf <- alloc_pointsto_buffer len {{ [`(djb_type)] # key_data : [len][8] }};
+  buf <- alloc_pointsto_buffer len {{ [`(DJB_TYPE)] # key_data : [len][8] }};
   llvm_points_to buffer buf;
   llvm_return (llvm_term {{ zero : [32] }});
 };

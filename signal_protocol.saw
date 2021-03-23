@@ -82,9 +82,9 @@ let print_tactic = do {
   abc;
 };
 
-buffer_alloc_ov            <- llvm_verify m "signal_buffer_alloc"     [] false (buffer_alloc_spec 64) abc;
-buffer_create_ov           <- llvm_verify m "signal_buffer_create"    [] false (buffer_create_spec 64) abc;
-buffer_copy_ov             <- llvm_verify m "signal_buffer_copy"      [] false (buffer_copy_spec 63) abc;
-buffer_copy_n_ov           <- llvm_verify m "signal_buffer_n_copy"    [] false (buffer_copy_n_spec 64 31) abc;
-buffer_append_ov           <- llvm_verify m "signal_buffer_append"    [] false (buffer_append_spec 63 31) abc;
-constant_memcmp_ov         <- llvm_verify m "signal_constant_memcmp"  [] false (constant_memcmp_spec 63) abc;
+buffer_alloc_ov    <- llvm_verify m "signal_buffer_alloc"     [] false (buffer_alloc_spec 64) abc;
+buffer_create_ov   <- llvm_verify m "signal_buffer_create"    [] false (buffer_create_spec 64) abc;
+buffer_copy_ov     <- llvm_verify m "signal_buffer_copy"      [] false (buffer_copy_spec 63) abc;
+buffer_copy_n_ov   <- llvm_verify m "signal_buffer_n_copy"    [] false (buffer_copy_n_spec 64 31) abc;
+buffer_append_ov   <- llvm_verify m "signal_buffer_append"    [] false (buffer_append_spec 63 31) abc;
+constant_memcmp_ov <- llvm_verify m "signal_constant_memcmp"  [] false (constant_memcmp_spec 63) abc;
