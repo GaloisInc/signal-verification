@@ -1,8 +1,9 @@
-LIBSIGNAL_BUILD_DIR=libsignal-protocol-c/build
+LIBSIGNAL_DIR=libsignal-protocol-c
+LIBSIGNAL_BUILD_DIR=$(LIBSIGNAL_DIR)/build
 
 all: libsignal saw-haskell saw-python-poetry
 
-libsignal: $(LIBSIGNAL_BUILD_DIR)/src/libsignal-protocol-c.a.bc
+libsignal: c/libsignal-everything.bc
 
 $(LIBSIGNAL_BUILD_DIR)/src/libsignal-protocol-c.a:
 	mkdir -p $(LIBSIGNAL_BUILD_DIR)
@@ -13,6 +14,12 @@ $(LIBSIGNAL_BUILD_DIR)/src/libsignal-protocol-c.a:
 $(LIBSIGNAL_BUILD_DIR)/src/libsignal-protocol-c.a.bc: $(LIBSIGNAL_BUILD_DIR)/src/libsignal-protocol-c.a
 	(cd $(LIBSIGNAL_BUILD_DIR) && \
 	extract-bc -b src/libsignal-protocol-c.a)
+
+c/libsignal-everything.bc: $(LIBSIGNAL_BUILD_DIR)/src/libsignal-protocol-c.a.bc c/dummy_signal_crypto_provider.bc
+	llvm-link $^ -o $@
+
+c/dummy_signal_crypto_provider.bc: c/dummy_signal_crypto_provider.c
+	clang -g -c -emit-llvm $< -o $@ -I$(LIBSIGNAL_DIR)/src
 
 .PHONY: saw-haskell
 saw-haskell:

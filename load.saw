@@ -1,1 +1,1 @@
-m <- llvm_load_module "libsignal-protocol-c/build/src/libsignal-protocol-c.a.bc";
+m <- llvm_load_module "c/libsignal-everything.bc";
