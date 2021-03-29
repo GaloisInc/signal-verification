@@ -10,7 +10,6 @@ from load import *
 from saw_helpers import *
 
 
-hmac_context_ty   = alias("struct.hmac_context")
 signal_context_ty = alias("struct.signal_context")
 
 message_version = 3
@@ -32,28 +31,26 @@ dummy_signal_crypto_provider = struct( global_var("dummy_random_func")
 class SignalHmacSha256InitSpec(Contract):
     def specification(self) -> None:
         context      = self.alloc(signal_context_ty)
-        hmac_context = self.alloc(ptr(hmac_context_ty))
+        hmac_context = self.alloc(ptr(i8))
         key          = self.alloc(i8)
         key_len      = self.fresh_var(i64, "key_len")
         self.points_to(field(context, "crypto_provider"), dummy_signal_crypto_provider)
 
         self.execute_func(context, hmac_context, key, key_len)
 
-        res = self.fresh_var(i32, "res")
-        self.returns(res)
+        self.returns(int_to_32_cryptol(0))
 
 class SignalHmacSha256UpdateSpec(Contract):
     def specification(self) -> None:
         context      = self.alloc(signal_context_ty)
-        hmac_context = self.alloc(ptr(hmac_context_ty))
+        hmac_context = self.alloc(i8)
         data         = self.alloc(i8)
         data_len     = self.fresh_var(i64, "data_len")
         self.points_to(field(context, "crypto_provider"), dummy_signal_crypto_provider)
 
         self.execute_func(context, hmac_context, data, data_len)
 
-        res = self.fresh_var(i32, "res")
-        self.returns(res)
+        self.returns(int_to_32_cryptol(0))
 
 class SignalHmacSha256FinalSpec(Contract):
     output_length: int
@@ -64,19 +61,18 @@ class SignalHmacSha256FinalSpec(Contract):
 
     def specification(self) -> None:
         context      = self.alloc(signal_context_ty)
-        hmac_context = self.alloc(ptr(hmac_context_ty))
+        hmac_context = self.alloc(i8)
         output       = self.alloc(ptr(buffer_type(self.output_length)))
         self.points_to(field(context, "crypto_provider"), dummy_signal_crypto_provider)
 
         self.execute_func(context, hmac_context, output)
 
-        res = self.fresh_var(i32, "res")
-        self.returns(res)
+        self.returns(int_to_32_cryptol(0))
 
 class SignalHmacSha256CleanupSpec(Contract):
     def specification(self) -> None:
         context      = self.alloc(signal_context_ty)
-        hmac_context = self.alloc(ptr(hmac_context_ty))
+        hmac_context = self.alloc(i8)
         self.points_to(field(context, "crypto_provider"), dummy_signal_crypto_provider)
 
         self.execute_func(context, hmac_context)

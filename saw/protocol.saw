@@ -1,11 +1,10 @@
 include "buffer_helpers.saw";
 include "load.saw";
 include "saw_helpers.saw";
+include "curve.saw";
 
-let hmac_context_ty   = llvm_alias "struct.hmac_context";
 let signal_context_ty = llvm_alias "struct.signal_context";
 
-let message_version = 3;
 let dummy_signal_crypto_provider = llvm_struct_value
       [ llvm_global "dummy_random_func"
       , llvm_global "dummy_hmac_sha256_init_func"
@@ -23,82 +22,75 @@ let dummy_signal_crypto_provider = llvm_struct_value
 
 let signal_hmac_sha256_init_spec = do {
   context      <- llvm_alloc signal_context_ty;
-  hmac_context <- llvm_alloc (llvm_pointer hmac_context_ty);
+  hmac_context <- llvm_alloc (llvm_pointer i8);
   key          <- llvm_alloc i8;
   key_len      <- llvm_fresh_var "key_len" i64;
   llvm_points_to (llvm_field context "crypto_provider") dummy_signal_crypto_provider;
 
   llvm_execute_func [context, hmac_context, key, llvm_term key_len];
 
-  res <- llvm_fresh_var "res" i32;
-  llvm_return (llvm_term res);
+  llvm_return (llvm_term {{ 0 : [32] }});
 };
 
 let signal_hmac_sha256_update_spec = do {
   context      <- llvm_alloc signal_context_ty;
-  hmac_context <- llvm_alloc (llvm_pointer hmac_context_ty);
+  hmac_context <- llvm_alloc i8;
   data         <- llvm_alloc i8;
   data_len     <- llvm_fresh_var "data_len" i64;
   llvm_points_to (llvm_field context "crypto_provider") dummy_signal_crypto_provider;
 
   llvm_execute_func [context, hmac_context, data, llvm_term data_len];
 
-  res <- llvm_fresh_var "res" i32;
-  llvm_return (llvm_term res);
+  llvm_return (llvm_term {{ 0 : [32] }});
 };
 
 let signal_hmac_sha256_final_spec (output_len : Int) = do {
   context      <- llvm_alloc signal_context_ty;
-  hmac_context <- llvm_alloc (llvm_pointer hmac_context_ty);
+  hmac_context <- llvm_alloc i8;
   output       <- llvm_alloc (buffer_type_ptr output_len);
   llvm_points_to (llvm_field context "crypto_provider") dummy_signal_crypto_provider;
 
   llvm_execute_func [context, hmac_context, output];
 
-  res <- llvm_fresh_var "res" i32;
-  llvm_return (llvm_term res);
+  llvm_return (llvm_term {{ 0 : [32] }});
 };
 
 let signal_hmac_sha256_cleanup_spec = do {
   context      <- llvm_alloc signal_context_ty;
-  hmac_context <- llvm_alloc (llvm_pointer hmac_context_ty);
+  hmac_context <- llvm_alloc i8;
   llvm_points_to (llvm_field context "crypto_provider") dummy_signal_crypto_provider;
 
   llvm_execute_func [context, hmac_context];
 };
 
-// let SIGNAL_MESSAGE_MAC_LENGTH = 8;
-//
-// let signal_message_get_mac_spec = do {
-//   let ec_public_key_ty = llvm_alias "struct.ec_public_key";
-//   buffer                <- llvm_alloc (buffer_type_ptr SIGNAL_MESSAGE_MAC_LENGTH);
-//   sender_identity_key   <- llvm_alloc ec_public_key_ty;
-//   receiver_identity_key <- llvm_alloc ec_public_key_ty;
-//   mac_key               <- llvm_alloc i8;
-//   mac_key_len           <- llvm_fresh_var "mac_key_len" i64;
-//   serialized            <- llvm_alloc i8;
-//   serialized_len        <- llvm_fresh_var "serialized_len" i64;
-//   global_context        <- llvm_alloc signal_context_ty;
-//   llvm_points_to (llvm_field global_context "crypto_provider") dummy_signal_crypto_provider;
-//
-//   llvm_execute_func [buffer,
-//                      llvm_term {{ `(message_version) : [8] }},
-//                      sender_identity_key,
-//                      receiver_identity_key,
-//                      mac_key, llvm_term mac_key_len,
-//                      serialized, llvm_term serialized_len,
-//                      global_context];
-//
-//   result <- llvm_fresh_var "result" i32;
-//   llvm_return (llvm_term result);
-// };
+let message_version = 3;
+let SIGNAL_MESSAGE_MAC_LENGTH = 8;
 
-// let signal_message_verify_mac_spec = do {
-// };
+let signal_message_get_mac_spec = do {
+  let ec_public_key_ty = llvm_alias "struct.ec_public_key";
+  buffer                        <- llvm_alloc (buffer_type_ptr SIGNAL_MESSAGE_MAC_LENGTH);
+  (_, _, sender_identity_key)   <- alloc_ec_public_key;
+  (_, _, receiver_identity_key) <- alloc_ec_public_key;
+  mac_key                       <- llvm_alloc i8;
+  mac_key_len                   <- llvm_fresh_var "mac_key_len" i64;
+  serialized                    <- llvm_alloc i8;
+  serialized_len                <- llvm_fresh_var "serialized_len" i64;
+  global_context                <- llvm_alloc signal_context_ty;
+  llvm_points_to (llvm_field global_context "crypto_provider") dummy_signal_crypto_provider;
+
+  llvm_execute_func [buffer,
+                     llvm_term {{ `(message_version) : [8] }},
+                     sender_identity_key,
+                     receiver_identity_key,
+                     mac_key, llvm_term mac_key_len,
+                     serialized, llvm_term serialized_len,
+                     global_context];
+
+  llvm_return (llvm_term {{ 0 : [32] }});
+};
 
 signal_hmac_sha256_init_ov    <- llvm_verify m "signal_hmac_sha256_init"    [] false signal_hmac_sha256_init_spec       abc;
 signal_hmac_sha256_update_ov  <- llvm_verify m "signal_hmac_sha256_update"  [] false signal_hmac_sha256_update_spec     abc;
 signal_hmac_sha256_final_ov   <- llvm_verify m "signal_hmac_sha256_final"   [] false (signal_hmac_sha256_final_spec 31) abc;
 signal_hmac_sha256_cleanup_ov <- llvm_verify m "signal_hmac_sha256_cleanup" [] false signal_hmac_sha256_cleanup_spec    abc;
 // signal_message_get_mac_ov     <- llvm_verify m "signal_message_get_mac"     [] false signal_message_get_mac_spec        abc;
-// signal_message_verify_mac_ov  <- llvm_verify m "signal_message_verify_mac"  [] false signal_message_verify_mac_spec     abc;
