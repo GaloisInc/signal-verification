@@ -1,6 +1,8 @@
 from saw.llvm import Contract, SetupVal, cryptol, struct
 from saw.llvm_types import LLVMType, array, i8
 
+def int_to_8_cryptol(length: int):
+    return cryptol("`{i}:[8]".format(i=length))
 
 def int_to_32_cryptol(length: int):
     return cryptol("`{i}:[32]".format(i=length))
