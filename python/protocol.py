@@ -2,7 +2,7 @@ import os
 import os.path
 
 from saw import llvm_verify
-from saw.llvm import Contract, field, global_var, null, struct
+from saw.llvm import Contract, field, global_var, null, struct, void
 from saw.llvm_types import alias, i8, i32, i64, ptr
 
 from buffer_helpers import *
@@ -42,4 +42,48 @@ class SignalHmacSha256InitSpec(Contract):
         res = self.fresh_var(i32, "res")
         self.returns(res)
 
-buffer_alloc_ov = llvm_verify(mod, "signal_hmac_sha256_init", SignalHmacSha256InitSpec())
+class SignalHmacSha256UpdateSpec(Contract):
+    def specification(self) -> None:
+        context      = self.alloc(signal_context_ty)
+        hmac_context = self.alloc(ptr(hmac_context_ty))
+        data         = self.alloc(i8)
+        data_len     = self.fresh_var(i64, "data_len")
+        self.points_to(field(context, "crypto_provider"), dummy_signal_crypto_provider)
+
+        self.execute_func(context, hmac_context, data, data_len)
+
+        res = self.fresh_var(i32, "res")
+        self.returns(res)
+
+class SignalHmacSha256FinalSpec(Contract):
+    output_length: int
+
+    def __init__(self, output_length: int):
+        super().__init__()
+        self.output_length = output_length
+
+    def specification(self) -> None:
+        context      = self.alloc(signal_context_ty)
+        hmac_context = self.alloc(ptr(hmac_context_ty))
+        output       = self.alloc(ptr(buffer_type(self.output_length)))
+        self.points_to(field(context, "crypto_provider"), dummy_signal_crypto_provider)
+
+        self.execute_func(context, hmac_context, output)
+
+        res = self.fresh_var(i32, "res")
+        self.returns(res)
+
+class SignalHmacSha256CleanupSpec(Contract):
+    def specification(self) -> None:
+        context      = self.alloc(signal_context_ty)
+        hmac_context = self.alloc(ptr(hmac_context_ty))
+        self.points_to(field(context, "crypto_provider"), dummy_signal_crypto_provider)
+
+        self.execute_func(context, hmac_context)
+
+        self.returns(void)
+
+signal_hmac_sha256_init_ov    = llvm_verify(mod, "signal_hmac_sha256_init",    SignalHmacSha256InitSpec())
+signal_hmac_sha256_update_ov  = llvm_verify(mod, "signal_hmac_sha256_update",  SignalHmacSha256UpdateSpec())
+signal_hmac_sha256_final_ov   = llvm_verify(mod, "signal_hmac_sha256_final",   SignalHmacSha256FinalSpec(31))
+signal_hmac_sha256_cleanup_ov = llvm_verify(mod, "signal_hmac_sha256_cleanup", SignalHmacSha256CleanupSpec())

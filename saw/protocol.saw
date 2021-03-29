@@ -34,6 +34,39 @@ let signal_hmac_sha256_init_spec = do {
   llvm_return (llvm_term res);
 };
 
+let signal_hmac_sha256_update_spec = do {
+  context      <- llvm_alloc signal_context_ty;
+  hmac_context <- llvm_alloc (llvm_pointer hmac_context_ty);
+  data         <- llvm_alloc i8;
+  data_len     <- llvm_fresh_var "data_len" i64;
+  llvm_points_to (llvm_field context "crypto_provider") dummy_signal_crypto_provider;
+
+  llvm_execute_func [context, hmac_context, data, llvm_term data_len];
+
+  res <- llvm_fresh_var "res" i32;
+  llvm_return (llvm_term res);
+};
+
+let signal_hmac_sha256_final_spec (output_len : Int) = do {
+  context      <- llvm_alloc signal_context_ty;
+  hmac_context <- llvm_alloc (llvm_pointer hmac_context_ty);
+  output       <- llvm_alloc (buffer_type_ptr output_len);
+  llvm_points_to (llvm_field context "crypto_provider") dummy_signal_crypto_provider;
+
+  llvm_execute_func [context, hmac_context, output];
+
+  res <- llvm_fresh_var "res" i32;
+  llvm_return (llvm_term res);
+};
+
+let signal_hmac_sha256_cleanup_spec = do {
+  context      <- llvm_alloc signal_context_ty;
+  hmac_context <- llvm_alloc (llvm_pointer hmac_context_ty);
+  llvm_points_to (llvm_field context "crypto_provider") dummy_signal_crypto_provider;
+
+  llvm_execute_func [context, hmac_context];
+};
+
 // let SIGNAL_MESSAGE_MAC_LENGTH = 8;
 //
 // let signal_message_get_mac_spec = do {
@@ -63,6 +96,9 @@ let signal_hmac_sha256_init_spec = do {
 // let signal_message_verify_mac_spec = do {
 // };
 
-signal_hmac_sha256_init_ov   <- llvm_verify m "signal_hmac_sha256_init"   [] false signal_hmac_sha256_init_spec   abc;
-// signal_message_get_mac_ov    <- llvm_verify m "signal_message_get_mac"    [] false signal_message_get_mac_spec    abc;
-// signal_message_verify_mac_ov <- llvm_verify m "signal_message_verify_mac" [] false signal_message_verify_mac_spec abc;
+signal_hmac_sha256_init_ov    <- llvm_verify m "signal_hmac_sha256_init"    [] false signal_hmac_sha256_init_spec       abc;
+signal_hmac_sha256_update_ov  <- llvm_verify m "signal_hmac_sha256_update"  [] false signal_hmac_sha256_update_spec     abc;
+signal_hmac_sha256_final_ov   <- llvm_verify m "signal_hmac_sha256_final"   [] false (signal_hmac_sha256_final_spec 31) abc;
+signal_hmac_sha256_cleanup_ov <- llvm_verify m "signal_hmac_sha256_cleanup" [] false signal_hmac_sha256_cleanup_spec    abc;
+// signal_message_get_mac_ov     <- llvm_verify m "signal_message_get_mac"     [] false signal_message_get_mac_spec        abc;
+// signal_message_verify_mac_ov  <- llvm_verify m "signal_message_verify_mac"  [] false signal_message_verify_mac_spec     abc;
