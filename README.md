@@ -103,7 +103,7 @@ You should now be able to typecheck and the files in this repo as a sanity
 check:
 
 ```
-$ poetry run mypy main.py
+$ poetry run mypy python/main.py
 ```
 
 ### `virtualenv`
@@ -174,12 +174,12 @@ automatically happen behind the scenes.
 In order to invoke the Python specifications, run the following:
 
 ```
-$ poetry run python main.py
+$ poetry run python python/main.py
 ```
 
 This repo also comes with a SAWScript equivalent of `main.py`, which can be
 run with:
 
 ```
-$ $SAW_EXE main.saw
+$ $SAW_EXE saw/main.saw
 ```
