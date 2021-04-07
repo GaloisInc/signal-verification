@@ -76,15 +76,26 @@ let constant_memcmp_spec (n: Int) = do {
   llvm_return (llvm_term retval);
 };
 
+let signal_type_init_spec = do {
+  instance <- llvm_alloc (llvm_alias "struct.signal_type_base");
+  let destroy_func = llvm_global "signal_message_destroy";
+
+  llvm_execute_func [instance, destroy_func];
+
+  llvm_points_to (llvm_field instance "ref_count") (llvm_term {{ 1 : [32] }});
+  llvm_points_to (llvm_field instance "destroy") destroy_func;
+};
+
 let print_tactic = do {
   //simplify (cryptol_ss ());
   print_goal;
   abc;
 };
 
-buffer_alloc_ov    <- llvm_verify m "signal_buffer_alloc"     [] false (buffer_alloc_spec 64) abc;
-buffer_create_ov   <- llvm_verify m "signal_buffer_create"    [] false (buffer_create_spec 64) abc;
-buffer_copy_ov     <- llvm_verify m "signal_buffer_copy"      [] false (buffer_copy_spec 63) abc;
-buffer_copy_n_ov   <- llvm_verify m "signal_buffer_n_copy"    [] false (buffer_copy_n_spec 64 31) abc;
-buffer_append_ov   <- llvm_verify m "signal_buffer_append"    [] false (buffer_append_spec 63 31) abc;
-constant_memcmp_ov <- llvm_verify m "signal_constant_memcmp"  [] false (constant_memcmp_spec 63) abc;
+buffer_alloc_ov     <- llvm_verify m "signal_buffer_alloc"     [] false (buffer_alloc_spec 64) abc;
+buffer_create_ov    <- llvm_verify m "signal_buffer_create"    [] false (buffer_create_spec 64) abc;
+buffer_copy_ov      <- llvm_verify m "signal_buffer_copy"      [] false (buffer_copy_spec 63) abc;
+buffer_copy_n_ov    <- llvm_verify m "signal_buffer_n_copy"    [] false (buffer_copy_n_spec 64 31) abc;
+buffer_append_ov    <- llvm_verify m "signal_buffer_append"    [] false (buffer_append_spec 63 31) abc;
+constant_memcmp_ov  <- llvm_verify m "signal_constant_memcmp"  [] false (constant_memcmp_spec 63) abc;
+signal_type_init_ov <- llvm_verify m "signal_type_init"        [] false signal_type_init_spec abc;
