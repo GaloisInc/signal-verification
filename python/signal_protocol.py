@@ -3,7 +3,7 @@ import os.path
 
 from saw import llvm_verify
 from saw.llvm import Contract, cryptol, elem, field, global_var, struct, void
-from saw.llvm_types import alias, array, i8, i64, ptr, struct_type
+from saw.llvm_types import alias, array, i8, i32, i64, ptr, struct_type
 
 from buffer_helpers import *
 from load import mod
@@ -148,6 +148,18 @@ class SignalTypeInitSpec(Contract):
         self.points_to(field(instance, "destroy"), destroy_func)
         self.returns(void)
 
+class SignalTypeRefSpec(Contract):
+    def specification(self) -> None:
+        ref_count = self.fresh_var(i32, "ref_count")
+        self.proclaim(cryptol(f"{ref_count.name()} > 0"))
+        instance = self.alloc(alias("struct.signal_type_base"))
+        self.points_to(field(instance, "ref_count"), ref_count)
+
+        self.execute_func(instance)
+
+        self.points_to(field(instance, "ref_count"), cryptol(f"{ref_count.name()} + 1"))
+        self.returns(void)
+
 buffer_alloc_ov     = llvm_verify(mod, "signal_buffer_alloc",    BufferAllocSpec(64))
 buffer_create_ov    = llvm_verify(mod, "signal_buffer_create",   BufferCreateSpec(64))
 buffer_copy_ov      = llvm_verify(mod, "signal_buffer_copy",     BufferCopySpec(63))
@@ -155,3 +167,4 @@ buffer_copy_n_ov    = llvm_verify(mod, "signal_buffer_n_copy",   BufferCopyNSpec
 buffer_append_ov    = llvm_verify(mod, "signal_buffer_append",   BufferAppendSpec(63, 31))
 constant_memcmp_ov  = llvm_verify(mod, "signal_constant_memcmp", ConstantMemcmpSpec(63))
 signal_type_init_ov = llvm_verify(mod, "signal_type_init",       SignalTypeInitSpec())
+signal_type_ref_ov  = llvm_verify(mod, "signal_type_ref",        SignalTypeRefSpec())

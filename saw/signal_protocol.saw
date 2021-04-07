@@ -86,6 +86,17 @@ let signal_type_init_spec = do {
   llvm_points_to (llvm_field instance "destroy") destroy_func;
 };
 
+let signal_type_ref_spec = do {
+  ref_count <- llvm_fresh_var "ref_count" i32;
+  llvm_precond {{ ref_count > 0 }};
+  instance <- llvm_alloc (llvm_alias "struct.signal_type_base");
+  llvm_points_to (llvm_field instance "ref_count") (llvm_term ref_count);
+
+  llvm_execute_func [instance];
+
+  llvm_points_to (llvm_field instance "ref_count") (llvm_term {{ ref_count + 1 }});
+};
+
 let print_tactic = do {
   //simplify (cryptol_ss ());
   print_goal;
@@ -99,3 +110,4 @@ buffer_copy_n_ov    <- llvm_verify m "signal_buffer_n_copy"    [] false (buffer_
 buffer_append_ov    <- llvm_verify m "signal_buffer_append"    [] false (buffer_append_spec 63 31) abc;
 constant_memcmp_ov  <- llvm_verify m "signal_constant_memcmp"  [] false (constant_memcmp_spec 63) abc;
 signal_type_init_ov <- llvm_verify m "signal_type_init"        [] false signal_type_init_spec abc;
+signal_type_ref_ov  <- llvm_verify m "signal_type_ref"         [] false signal_type_ref_spec abc;
