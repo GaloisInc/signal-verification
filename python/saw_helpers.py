@@ -1,7 +1,6 @@
 from typing import Optional, Tuple
 
-from saw.llvm import Contract, FreshVar, SetupVal
-from saw.llvm_types import LLVMType
+from saw.llvm import Contract, FreshVar, LLVMType, SetupVal
 
 
 def ptr_to_fresh(spec : Contract, ty : LLVMType, name : Optional[str] = None) -> Tuple[FreshVar, SetupVal]:

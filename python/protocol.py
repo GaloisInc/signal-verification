@@ -2,8 +2,7 @@ import os
 import os.path
 
 from saw import llvm_verify
-from saw.llvm import Contract, elem, field, global_var, null, struct, void
-from saw.llvm_types import alias, i8, i32, i64, ptr
+from saw.llvm import Contract, alias_ty, elem, field, global_var, i8, i32, i64, null, ptr_ty, struct, void
 
 from buffer_helpers import *
 from curve import *
@@ -11,7 +10,7 @@ from load import *
 from saw_helpers import *
 
 
-signal_context_ty = alias("struct.signal_context")
+signal_context_ty = alias_ty("struct.signal_context")
 
 message_version = 3
 
@@ -34,7 +33,7 @@ dummy_signal_crypto_provider = struct( global_var("dummy_random_func")
 class SignalHmacSha256InitSpec(Contract):
     def specification(self) -> None:
         context      = self.alloc(signal_context_ty)
-        hmac_context = self.alloc(ptr(i8))
+        hmac_context = self.alloc(ptr_ty(i8))
         key          = self.alloc(i8)
         key_len      = self.fresh_var(i64, "key_len")
         self.points_to(field(context, "crypto_provider"), dummy_signal_crypto_provider)
@@ -61,7 +60,7 @@ class SignalHmacSha256FinalSpec(Contract):
     def specification(self) -> None:
         context      = self.alloc(signal_context_ty)
         hmac_context = self.alloc(i8)
-        output       = self.alloc(ptr(buffer_type(SIGNAL_MESSAGE_MAC_LENGTH)))
+        output       = self.alloc(ptr_ty(buffer_type(SIGNAL_MESSAGE_MAC_LENGTH)))
         self.points_to(field(context, "crypto_provider"), dummy_signal_crypto_provider)
 
         self.execute_func(context, hmac_context, output)
@@ -83,8 +82,8 @@ class SignalHmacSha256CleanupSpec(Contract):
 
 class SignalMessageGetMacSpec(Contract):
     def specification(self) -> None:
-        ec_public_key = alias("struct.ec_public_key")
-        buffer_                       = self.alloc(ptr(buffer_type(SIGNAL_MESSAGE_MAC_LENGTH)))
+        ec_public_key = alias_ty("struct.ec_public_key")
+        buffer_                       = self.alloc(ptr_ty(buffer_type(SIGNAL_MESSAGE_MAC_LENGTH)))
         (_, _, sender_identity_key)   = alloc_ec_public_key(self)
         (_, _, receiver_identity_key) = alloc_ec_public_key(self)
         mac_key                       = self.alloc(i8)

@@ -1,5 +1,4 @@
-from saw.llvm import Contract, SetupVal, cryptol, struct
-from saw.llvm_types import LLVMType, array, i8
+from saw.llvm import Contract, LLVMType, SetupVal, array_ty, cryptol, i8, struct
 
 def int_to_8_cryptol(length: int):
     return cryptol("`{i}:[8]".format(i=length))
@@ -11,7 +10,7 @@ def int_to_64_cryptol(length: int):
     return cryptol("`{i}:[64]".format(i=length))
 
 def buffer_type(length: int) -> LLVMType:
-    return array(8 + length, i8)
+    return array_ty(8 + length, i8)
 
 def alloc_buffer_aligned(spec: Contract, length: int) -> SetupVal:
     return spec.alloc(buffer_type(length), alignment = 16)

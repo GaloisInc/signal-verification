@@ -2,8 +2,7 @@ import os
 import os.path
 
 from saw import llvm_verify
-from saw.llvm import Contract, cryptol, elem, field, global_var, struct, void
-from saw.llvm_types import alias, array, i8, i32, i64, ptr, struct_type
+from saw.llvm import Contract, alias_ty, array_ty, cryptol, elem, i8, i32, i64, field, global_var, ptr_ty, struct, struct_ty, void
 
 from buffer_helpers import *
 from load import mod
@@ -34,7 +33,7 @@ class BufferCreateSpec(Contract):
         self.length = length
 
     def specification(self) -> None:
-        (data, datap) = ptr_to_fresh(self, array(self.length, i8), name = "data")
+        (data, datap) = ptr_to_fresh(self, array_ty(self.length, i8), name = "data")
 
         self.execute_func(datap, int_to_64_cryptol(self.length))
 
@@ -49,7 +48,7 @@ class BufferCopySpec(Contract):
         self.length = length
 
     def specification(self) -> None:
-        data = self.fresh_var(array(self.length, i8), "data")
+        data = self.fresh_var(array_ty(self.length, i8), "data")
         buf  = alloc_pointsto_buffer_readonly(self, self.length, data)
 
         self.execute_func(buf)
@@ -67,7 +66,7 @@ class BufferCopyNSpec(Contract):
         self.n = n
 
     def specification(self) -> None:
-        data = self.fresh_var(array(self.length, i8), "data")
+        data = self.fresh_var(array_ty(self.length, i8), "data")
         buf  = alloc_pointsto_buffer_readonly(self, self.length, data)
 
         self.execute_func(buf, int_to_64_cryptol(self.n))
@@ -87,10 +86,10 @@ class BufferAppendSpec(Contract):
         self.additional_length = additional_length
 
     def specification(self) -> None:
-        buf_data = self.fresh_var(array(self.buf_length, i8), "buffer_data")
+        buf_data = self.fresh_var(array_ty(self.buf_length, i8), "buffer_data")
         buf      = alloc_pointsto_buffer(self, self.buf_length, buf_data)
 
-        (additional_data, additional_datap) = ptr_to_fresh(self, array(self.additional_length, i8),
+        (additional_data, additional_datap) = ptr_to_fresh(self, array_ty(self.additional_length, i8),
                                                            name = "additional_data")
 
         self.execute_func(buf, additional_datap, int_to_64_cryptol(self.additional_length))
@@ -108,8 +107,8 @@ class ConstantMemcmpSpec(Contract):
         self.n = n
 
     def specification(self) -> None:
-        (s1, s1p) = ptr_to_fresh(self, array(self.n, i8), name = "s1")
-        (s2, s2p) = ptr_to_fresh(self, array(self.n, i8), name = "s2")
+        (s1, s1p) = ptr_to_fresh(self, array_ty(self.n, i8), name = "s1")
+        (s2, s2p) = ptr_to_fresh(self, array_ty(self.n, i8), name = "s2")
         nval = int_to_64_cryptol(self.n)
 
         self.execute_func(s1p, s2p, nval)
@@ -122,12 +121,12 @@ DJB_KEY_LEN = 32
 class ECPublicKeySerializeSpec(Contract):
     def specification(self) -> None:
         length = DJB_KEY_LEN + 1
-        signal_type_base_ty = alias("struct.signal_type_base")
-        djb_array_ty = array(DJB_KEY_LEN, i8)
-        buffer_ = self.alloc(ptr(buffer_type(length)))
+        signal_type_base_ty = alias_ty("struct.signal_type_base")
+        djb_array_ty = array_ty(DJB_KEY_LEN, i8)
+        buffer_ = self.alloc(ptr_ty(buffer_type(length)))
         key_base = self.fresh_var(signal_type_base_ty, "key_base")
         key_data = self.fresh_var(djb_array_ty, "key_data")
-        key = self.alloc(struct_type(signal_type_base_ty, djb_array_ty),
+        key = self.alloc(struct_ty(signal_type_base_ty, djb_array_ty),
                          points_to = struct(key_base, key_data))
 
         self.execute_func(buffer_, key)
@@ -139,7 +138,7 @@ class ECPublicKeySerializeSpec(Contract):
 
 class SignalTypeInitSpec(Contract):
     def specification(self) -> None:
-        instance = self.alloc(alias("struct.signal_type_base"))
+        instance = self.alloc(alias_ty("struct.signal_type_base"))
         destroy_func = global_var("signal_message_destroy")
 
         self.execute_func(instance, destroy_func)
@@ -152,7 +151,7 @@ class SignalTypeRefSpec(Contract):
     def specification(self) -> None:
         ref_count = self.fresh_var(i32, "ref_count")
         self.proclaim(cryptol(f"{ref_count.name()} > 0"))
-        instance = self.alloc(alias("struct.signal_type_base"))
+        instance = self.alloc(alias_ty("struct.signal_type_base"))
         self.points_to(field(instance, "ref_count"), ref_count)
 
         self.execute_func(instance)
