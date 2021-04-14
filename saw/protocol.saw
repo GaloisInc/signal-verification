@@ -5,6 +5,9 @@ include "curve.saw";
 
 let signal_context_ty = llvm_alias "struct.signal_context";
 let message_version = 3;
+let HMAC_CONTEXT_LENGTH = 1;
+let RATCHET_MAC_KEY_LENGTH = 32;
+let SERIALIZED_LENGTH = 42;
 let SIGNAL_MESSAGE_MAC_LENGTH = 8;
 
 let dummy_signal_crypto_provider = llvm_struct_value
@@ -22,34 +25,34 @@ let dummy_signal_crypto_provider = llvm_struct_value
       , llvm_null
       ];
 
-let signal_hmac_sha256_init_spec = do {
-  context      <- llvm_alloc signal_context_ty;
+let signal_hmac_sha256_init_spec (key_len : Int) = do {
+  context      <- llvm_alloc_readonly signal_context_ty;
   hmac_context <- llvm_alloc (llvm_pointer i8);
-  key          <- llvm_alloc i8;
-  key_len      <- llvm_fresh_var "key_len" i64;
+  key_data     <- llvm_fresh_var "key_data" (llvm_array key_len i8);
+  key          <- alloc_init (llvm_array key_len i8) (llvm_term key_data);
   llvm_points_to (llvm_field context "crypto_provider") dummy_signal_crypto_provider;
 
-  llvm_execute_func [context, hmac_context, key, llvm_term key_len];
+  llvm_execute_func [context, hmac_context, key, llvm_term {{ `(key_len) : [64] }}];
 
   dummy_hmac_context <- alloc_init i8 (llvm_term {{ 42 : [8] }});
   llvm_points_to hmac_context dummy_hmac_context;
   llvm_return (llvm_term {{ 0 : [32] }});
 };
 
-let signal_hmac_sha256_update_spec = do {
-  context      <- llvm_alloc signal_context_ty;
+let signal_hmac_sha256_update_spec (data_len : Int) = do {
+  context      <- llvm_alloc_readonly signal_context_ty;
   hmac_context <- llvm_alloc i8;
-  data         <- llvm_alloc i8;
-  data_len     <- llvm_fresh_var "data_len" i64;
+  data_data    <- llvm_fresh_var "data_data" (llvm_array data_len i8);
+  data         <- alloc_init_readonly (llvm_array data_len i8) (llvm_term data_data);
   llvm_points_to (llvm_field context "crypto_provider") dummy_signal_crypto_provider;
 
-  llvm_execute_func [context, hmac_context, data, llvm_term data_len];
+  llvm_execute_func [context, hmac_context, data, llvm_term {{ `(data_len) : [64] }}];
 
   llvm_return (llvm_term {{ 0 : [32] }});
 };
 
 let signal_hmac_sha256_final_spec = do {
-  context      <- llvm_alloc signal_context_ty;
+  context      <- llvm_alloc_readonly signal_context_ty;
   hmac_context <- llvm_alloc i8;
   output       <- llvm_alloc (buffer_type_ptr SIGNAL_MESSAGE_MAC_LENGTH);
   llvm_points_to (llvm_field context "crypto_provider") dummy_signal_crypto_provider;
@@ -63,31 +66,31 @@ let signal_hmac_sha256_final_spec = do {
 };
 
 let signal_hmac_sha256_cleanup_spec = do {
-  context      <- llvm_alloc signal_context_ty;
+  context      <- llvm_alloc_readonly signal_context_ty;
   hmac_context <- llvm_alloc i8;
   llvm_points_to (llvm_field context "crypto_provider") dummy_signal_crypto_provider;
 
   llvm_execute_func [context, hmac_context];
 };
 
-let signal_message_get_mac_spec = do {
+let signal_message_get_mac_spec (mac_key_len : Int) (serialized_len : Int) = do {
   let ec_public_key_ty = llvm_alias "struct.ec_public_key";
   buffer                        <- llvm_alloc (buffer_type_ptr SIGNAL_MESSAGE_MAC_LENGTH);
   (_, _, sender_identity_key)   <- alloc_ec_public_key;
   (_, _, receiver_identity_key) <- alloc_ec_public_key;
-  mac_key                       <- llvm_alloc i8;
-  mac_key_len                   <- llvm_fresh_var "mac_key_len" i64;
-  serialized                    <- llvm_alloc i8;
-  serialized_len                <- llvm_fresh_var "serialized_len" i64;
-  global_context                <- llvm_alloc signal_context_ty;
+  mac_key_data                  <- llvm_fresh_var "mac_key_data" (llvm_array mac_key_len i8);
+  mac_key                       <- alloc_init (llvm_array mac_key_len i8) (llvm_term mac_key_data);
+  serialized_data               <- llvm_fresh_var "serialized_data" (llvm_array serialized_len i8);
+  serialized                    <- alloc_init (llvm_array serialized_len i8) (llvm_term serialized_data);
+  global_context                <- llvm_alloc_readonly signal_context_ty;
   llvm_points_to (llvm_field global_context "crypto_provider") dummy_signal_crypto_provider;
 
   llvm_execute_func [buffer,
                      llvm_term {{ `(message_version) : [8] }},
                      sender_identity_key,
                      receiver_identity_key,
-                     mac_key, llvm_term mac_key_len,
-                     serialized, llvm_term serialized_len,
+                     mac_key, llvm_term {{ `(mac_key_len) : [64] }},
+                     serialized, llvm_term {{ `(serialized_len) : [64] }},
                      global_context];
 
   buffer_buf <- alloc_buffer_aligned SIGNAL_MESSAGE_MAC_LENGTH;
@@ -97,8 +100,14 @@ let signal_message_get_mac_spec = do {
   llvm_return (llvm_term {{ 0 : [32] }});
 };
 
-signal_hmac_sha256_init_ov    <- llvm_verify m "signal_hmac_sha256_init"    [] false signal_hmac_sha256_init_spec    abc;
-signal_hmac_sha256_update_ov  <- llvm_verify m "signal_hmac_sha256_update"  [] false signal_hmac_sha256_update_spec  abc;
-signal_hmac_sha256_final_ov   <- llvm_verify m "signal_hmac_sha256_final"   [] false signal_hmac_sha256_final_spec   abc;
-signal_hmac_sha256_cleanup_ov <- llvm_verify m "signal_hmac_sha256_cleanup" [] false signal_hmac_sha256_cleanup_spec abc;
-signal_message_get_mac_ov     <- llvm_verify m "signal_message_get_mac"     [] false signal_message_get_mac_spec     abc;
+signal_hmac_sha256_init_ov              <- llvm_verify m "signal_hmac_sha256_init"    [] false (signal_hmac_sha256_init_spec RATCHET_MAC_KEY_LENGTH) abc;
+signal_hmac_sha256_update_djb_key_ov    <- llvm_verify m "signal_hmac_sha256_update"  [] false (signal_hmac_sha256_update_spec (eval_int {{ `(DJB_KEY_LEN) + 1 : [64] }})) abc;
+signal_hmac_sha256_update_serialized_ov <- llvm_verify m "signal_hmac_sha256_update"  [] false (signal_hmac_sha256_update_spec SERIALIZED_LENGTH) abc;
+signal_hmac_sha256_final_ov             <- llvm_verify m "signal_hmac_sha256_final"   [] false signal_hmac_sha256_final_spec  abc;
+signal_hmac_sha256_cleanup_ov           <- llvm_verify m "signal_hmac_sha256_cleanup" [] false signal_hmac_sha256_cleanup_spec abc;
+signal_message_get_mac_ov               <- llvm_verify m "signal_message_get_mac"     [ /* signal_hmac_sha256_init_ov
+                                                                                      , signal_hmac_sha256_update_djb_key_ov
+                                                                                      , signal_hmac_sha256_update_serialized_ov
+                                                                                      , signal_hmac_sha256_final_ov */
+                                                                                      ]
+                                                                                      false (signal_message_get_mac_spec RATCHET_MAC_KEY_LENGTH SERIALIZED_LENGTH) abc;
