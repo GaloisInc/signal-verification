@@ -73,7 +73,7 @@ class BufferCopyNSpec(Contract):
 
         new_length = min(self.length, self.n)
 
-        new_buf = alloc_pointsto_buffer(self, new_length, cryptol("take`{i} data".format(i=new_length)))
+        new_buf = alloc_pointsto_buffer(self, new_length, cryptol(f"take`{{ {new_length} }} {data.name()}"))
         self.returns(new_buf)
 
 class BufferAppendSpec(Contract):
@@ -150,7 +150,7 @@ class SignalTypeInitSpec(Contract):
 class SignalTypeRefSpec(Contract):
     def specification(self) -> None:
         ref_count = self.fresh_var(i32, "ref_count")
-        self.proclaim(cryptol(f"{ref_count.name()} > 0"))
+        self.precondition(cryptol(f"{ref_count.name()} > 0"))
         instance = self.alloc(alias_ty("struct.signal_type_base"))
         self.points_to(field(instance, "ref_count"), ref_count)
 

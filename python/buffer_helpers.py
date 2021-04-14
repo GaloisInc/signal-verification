@@ -20,10 +20,10 @@ def alloc_buffer_aligned_readonly(spec: Contract, length: int) -> SetupVal:
 
 def alloc_pointsto_buffer(spec: Contract, length: int, data: SetupVal) -> SetupVal:
     buf = alloc_buffer_aligned(spec, length)
-    spec.points_to(buf, struct(int_to_64_cryptol(length)), check_target_type = None)
+    spec.points_to(buf, struct(int_to_64_cryptol(length), data), check_target_type = None)
     return buf
 
 def alloc_pointsto_buffer_readonly(spec: Contract, length: int, data: SetupVal) -> SetupVal:
     buf = alloc_buffer_aligned_readonly(spec, length)
-    spec.points_to(buf, struct(int_to_64_cryptol(length)), check_target_type = None)
+    spec.points_to(buf, struct(int_to_64_cryptol(length), data), check_target_type = None)
     return buf
