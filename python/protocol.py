@@ -110,6 +110,12 @@ class SignalHmacSha256CleanupSpec(Contract):
 
         self.returns(void)
 
+def mk_hmac(serialized_len: int, serialized_data: FreshVar, receiver_identity_key_data : FreshVar,
+            sender_identity_key_data: FreshVar, mac_key_len: int, mac_key_data: FreshVar) -> SetupVal:
+    sender_identity_buf   = f"[{DJB_TYPE}] # {sender_identity_key_data.name()}   : [{DJB_KEY_LEN} + 1][8]"
+    receiver_identity_buf = f"[{DJB_TYPE}] # {receiver_identity_key_data.name()} : [{DJB_KEY_LEN} + 1][8]"
+    return cryptol(f"hmac_final (hmac_update`{{ {serialized_len} }} {serialized_data.name()} (hmac_update`{{ {DJB_KEY_LEN}+1 }} ({receiver_identity_buf}) (hmac_update`{{ {DJB_KEY_LEN}+1 }} ({sender_identity_buf}) (hmac_init`{{ {mac_key_len} }} {mac_key_data.name()}))))")
+
 class SignalMessageGetMacSpec(Contract):
     mac_key_len: int
     serialized_len: int
@@ -139,9 +145,8 @@ class SignalMessageGetMacSpec(Contract):
                           serialized, int_to_64_cryptol(self.serialized_len),
                           global_context)
 
-        sender_identity_buf   = f"[{DJB_TYPE}] # {sender_identity_key_data.name()}   : [{DJB_KEY_LEN} + 1][8]"
-        receiver_identity_buf = f"[{DJB_TYPE}] # {receiver_identity_key_data.name()} : [{DJB_KEY_LEN} + 1][8]"
-        expected = cryptol(f"hmac_final (hmac_update`{{ {self.serialized_len} }} {serialized_data.name()} (hmac_update`{{ {DJB_KEY_LEN}+1 }} ({receiver_identity_buf}) (hmac_update`{{ {DJB_KEY_LEN}+1 }} ({sender_identity_buf}) (hmac_init`{{ {self.mac_key_len} }} {mac_key_data.name()}))))")
+        expected = mk_hmac(self.serialized_len, serialized_data, receiver_identity_key_data,
+                           sender_identity_key_data, self.mac_key_len, mac_key_data)
 
         # buffer_buf = alloc_buffer_aligned(self, SIGNAL_MESSAGE_MAC_LENGTH)
         # self.points_to(elem(buffer_buf, 0), int_to_64_cryptol(SIGNAL_MESSAGE_MAC_LENGTH), check_target_type = i64)
@@ -174,9 +179,8 @@ class SignalMessageVerifyMacSpec(Contract):
         serialized_message_len  = self.serialized_len - SIGNAL_MESSAGE_MAC_LENGTH
         serialized_message_data = self.fresh_var(array_ty(serialized_message_len, i8), "serialized_message_data")
 
-        sender_identity_buf   = f"[{DJB_TYPE}] # {sender_identity_key_data.name()}   : [{DJB_KEY_LEN} + 1][8]"
-        receiver_identity_buf = f"[{DJB_TYPE}] # {receiver_identity_key_data.name()} : [{DJB_KEY_LEN} + 1][8]"
-        expected_mac_data     = cryptol(f"hmac_final (hmac_update`{{ {serialized_message_len} }} {serialized_message_data.name()} (hmac_update`{{ {DJB_KEY_LEN}+1 }} ({receiver_identity_buf}) (hmac_update`{{ {DJB_KEY_LEN}+1 }} ({sender_identity_buf}) (hmac_init`{{ {self.mac_key_len} }} {mac_key_data.name()}))))")
+        expected_mac_data = mk_hmac(serialized_message_len, serialized_message_data, receiver_identity_key_data,
+                                    sender_identity_key_data, self.mac_key_len, mac_key_data)
 
         serialized = alloc_buffer_aligned(self, self.serialized_len)
         self.points_to(elem(serialized, 0),                          int_to_64_cryptol(self.serialized_len), check_target_type = None)

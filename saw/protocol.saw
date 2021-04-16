@@ -83,6 +83,16 @@ let signal_hmac_sha256_cleanup_spec = do {
   llvm_execute_func [context, hmac_context];
 };
 
+let mk_hmac (serialized_len : Int) (serialized_data : Term) (receiver_identity_key_data : Term)
+            (sender_identity_key_data : Term) (mac_key_len : Int) (mac_key_data : Term) : Term =
+  let sender_identity_buf   = {{ [`(DJB_TYPE)] # sender_identity_key_data   : [DJB_KEY_LEN + 1][8] }} in
+  let receiver_identity_buf = {{ [`(DJB_TYPE)] # receiver_identity_key_data : [DJB_KEY_LEN + 1][8] }} in
+  {{ hmac_final
+       (hmac_update`{serialized_len} serialized_data
+         (hmac_update`{DJB_KEY_LEN+1} receiver_identity_buf
+           (hmac_update`{DJB_KEY_LEN+1} sender_identity_buf
+             (hmac_init`{mac_key_len} mac_key_data)))) }};
+
 let signal_message_get_mac_spec (mac_key_len : Int) (serialized_len : Int) = do {
   let ec_public_key_ty = llvm_alias "struct.ec_public_key";
   buffer                                                 <- llvm_alloc (buffer_type_ptr SIGNAL_MESSAGE_MAC_LENGTH);
@@ -103,9 +113,8 @@ let signal_message_get_mac_spec (mac_key_len : Int) (serialized_len : Int) = do 
                      serialized, llvm_term {{ `(serialized_len) : [64] }},
                      global_context];
 
-  let sender_identity_buf   = {{ [`(DJB_TYPE)] # sender_identity_key_data   : [DJB_KEY_LEN + 1][8] }};
-  let receiver_identity_buf = {{ [`(DJB_TYPE)] # receiver_identity_key_data : [DJB_KEY_LEN + 1][8] }};
-  let expected = {{ hmac_final (hmac_update`{serialized_len} serialized_data (hmac_update`{DJB_KEY_LEN+1} receiver_identity_buf (hmac_update`{DJB_KEY_LEN+1} sender_identity_buf (hmac_init`{mac_key_len} mac_key_data)))) }};
+  let expected = mk_hmac serialized_len serialized_data receiver_identity_key_data sender_identity_key_data
+                                        mac_key_len mac_key_data;
 
   // buffer_buf <- alloc_buffer_aligned SIGNAL_MESSAGE_MAC_LENGTH;
   // llvm_points_to_at_type (llvm_elem buffer_buf 0) i64 (llvm_term {{ `(SIGNAL_MESSAGE_MAC_LENGTH) : [64] }});
@@ -130,10 +139,8 @@ let signal_message_verify_mac_spec (mac_key_len : Int) (serialized_len : Int) = 
 
   let serialized_message_len = eval_int {{ `(serialized_len) - `(SIGNAL_MESSAGE_MAC_LENGTH) : [64] }};
   serialized_message_data <- llvm_fresh_var "serialized_message_data" (llvm_array serialized_message_len i8);
-
-  let sender_identity_buf   = {{ [`(DJB_TYPE)] # sender_identity_key_data   : [DJB_KEY_LEN + 1][8] }};
-  let receiver_identity_buf = {{ [`(DJB_TYPE)] # receiver_identity_key_data : [DJB_KEY_LEN + 1][8] }};
-  let expected_mac_data = {{ hmac_final (hmac_update`{serialized_message_len} serialized_message_data (hmac_update`{DJB_KEY_LEN+1} receiver_identity_buf (hmac_update`{DJB_KEY_LEN+1} sender_identity_buf (hmac_init`{mac_key_len} mac_key_data)))) }};
+  let expected_mac_data = mk_hmac serialized_message_len serialized_message_data receiver_identity_key_data sender_identity_key_data
+                                  mac_key_len mac_key_data;
 
   serialized <- alloc_buffer_aligned serialized_len;
   llvm_points_to_untyped (llvm_elem serialized 0) (llvm_term {{`(serialized_len) : [64]}});
