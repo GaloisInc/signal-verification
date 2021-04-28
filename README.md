@@ -2,6 +2,12 @@
 
 An effort to start verifying signal, demonstrating the SAW Python frontend in the process.
 
+# Note to readers
+
+The contents of this repo have been folded into
+[`saw-demos`](https://github.com/GaloisInc/saw-demos), so go there for the
+latest code. The contents of this repo are mostly of historical interest.
+
 # Building dependencies
 
 First, install the following prerequisites:
